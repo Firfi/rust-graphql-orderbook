@@ -1,0 +1,17 @@
+[package]
+name = "rust-graphql-orderbook"
+version = "0.1.0"
+edition = "2018"
+publish = false
+
+[dependencies]
+axum = "0.4.8"
+hyper = { version = "0.14.18", features = ["full"] }
+tokio = { version = "1.17.0", features = ["full"] }
+tower = "0.4.12"
+async-graphql = "3.0.36"
+async-graphql-axum = "3.0.36"
+slab = "0.4.5"
+num-bigint = "0.4"
+rand = "0.8.5"
+once_cell = "1.10.0"
