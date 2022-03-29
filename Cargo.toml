@@ -10,6 +10,7 @@ hyper = { version = "0.14.18", features = ["full"] }
 tokio = { version = "1.17.0", features = ["full"] }
 tokio-stream = "0.1.8"
 tower = "0.4.12"
+tower-http = { version = "0.2.5", features = ["cors"] }
 async-graphql = "3.0.36"
 async-graphql-axum = "3.0.36"
 slab = "0.4.5"

@@ -17,7 +17,10 @@ use axum::{
     response::{Html, IntoResponse},
     routing::get,
     Json, Router,
+    http::Method,
 };
+use std::net::SocketAddr;
+use tower_http::cors::{Any, CorsLayer, Origin};
 use crate::orderbook::{OrderBookSchema, QueryRoot, SubscriptionRoot};
 
 //async fn graphql_handler(schema: Extension<OrderBookSchema>, req: GraphQLRequest) -> GraphQLResponse {
@@ -40,7 +43,12 @@ async fn main() {
     let app = Router::new()
         .route("/", get(graphql_playground).post(graphql_handler))
         .route("/ws", GraphQLSubscription::new(schema.clone()))
-        .layer(Extension(schema));
+        .layer(Extension(schema))
+        .layer(CorsLayer::new()
+                   .allow_origin(Any)
+                   .allow_methods(Any)
+                   .allow_headers(Any),
+        );
 
     println!("{}", format!("Playground: http://localhost:{}", &PORT));
 
