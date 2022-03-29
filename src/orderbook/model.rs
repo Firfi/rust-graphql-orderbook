@@ -1,11 +1,16 @@
 use std::borrow::Cow;
 use std::collections::VecDeque;
+use std::time::Duration;
 use async_graphql::{connection::{query, Connection, Edge, EmptyFields}, Context, ContextSelectionSet, Enum, FieldResult, Interface, Object, OutputType, Positioned, ServerResult};
 use async_graphql::parser::types::Field;
 use async_graphql::registry::Registry;
 use crate::orderbook::{MyBigUint, Order, OrderBook};
 use async_graphql::*;
+use async_graphql::futures_util::StreamExt;
+use futures_core::Stream;
+use tokio_stream::wrappers::IntervalStream;
 use crate::orderbook::database::{HISTORY_CAPACITY, HISTORY_STATE, ORDERBOOK_STATE};
+use crate::orderbook::simple_broker::SimpleBroker;
 
 #[derive(Enum, Copy, Clone, Eq, PartialEq)]
 pub enum OrderKind {
@@ -46,5 +51,47 @@ pub(crate) fn deal(d: Deal) {
             dh.pop_back();
         });
     }
-    dh.push_front(d);
+    dh.push_front(d.clone());
+    SimpleBroker::publish(d.clone());
+}
+
+
+
+pub(crate) struct SubscriptionRoot;
+
+#[Subscription]
+impl SubscriptionRoot {
+    async fn deals(&self) -> impl Stream<Item = Deal> {
+        SimpleBroker::<Deal>::subscribe()
+    }
+    async fn new_orders(&self) -> impl Stream<Item = OrderAdded> {
+        SimpleBroker::<OrderAdded>::subscribe()
+    }
+    async fn removed_orders(&self) -> impl Stream<Item = OrderRemoved> {
+        SimpleBroker::<OrderRemoved>::subscribe()
+    }
+}
+
+// #[derive(Enum, Copy, Clone, Eq, PartialEq)]
+// pub(crate) enum OrderUpdateType {
+//     Add,
+//     Remove,
+// }
+
+#[derive(Hash, Clone, SimpleObject)]
+pub(crate) struct OrderAdded {
+    pub(crate) order: Order
+}
+
+#[derive(Hash, Clone, SimpleObject)]
+pub(crate) struct OrderRemoved {
+    pub(crate) order: Order
+}
+
+pub(crate) fn publish_order_add(order: &Order) {
+    SimpleBroker::publish(OrderAdded { order: order.clone() });
+}
+
+pub(crate) fn publish_order_remove(order: &Order) {
+    SimpleBroker::publish(OrderRemoved { order: order.clone() });
 }

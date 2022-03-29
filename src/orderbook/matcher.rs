@@ -4,7 +4,7 @@ use crate::orderbook::{Order, MyBigUint, OrderCommons};
 use async_graphql::*;
 use slab::Slab;
 use std::fmt::Display;
-use crate::orderbook::model::{Deal, deal};
+use crate::orderbook::model::{Deal, deal, publish_order_add, publish_order_remove};
 
 pub(crate) struct Matcher {
 
@@ -51,20 +51,22 @@ impl Matcher {
         };
         // recursive
         fn _run(qty: usize, kind: OrderType, data: &OrderCommons, retrieve_queue: &mut BinaryHeap<Order>, add_queue: &mut BinaryHeap<Order>, retrieve_map: &mut Slab<OrderCommons>, add_map: &mut Slab<OrderCommons>, comparison: &CompareOrders, deal_price: &DealPrice) {
-            fn make_order(d: &OrderCommons, kind: OrderType, add_queue: &mut BinaryHeap<Order>, add_map: &mut Slab<OrderCommons>) -> Order {
+            fn create_order(d: &OrderCommons, kind: OrderType, add_queue: &mut BinaryHeap<Order>, add_map: &mut Slab<OrderCommons>) -> Order {
                 let id = add_map.insert(d.clone());
                 let order = Order { id, data: d.clone(), kind };
                 add_queue.push(order.clone());
+                publish_order_add(&order);
                 return order.clone();
             };
             let peeked_order = retrieve_queue.peek();
             if peeked_order.is_some() && (comparison.f)(&peeked_order.unwrap().data.price, &data.price) {
-                let retrieve_order = retrieve_queue.pop().unwrap(); // is_some already
-                retrieve_map.remove(retrieve_order.id);
-                let retrieved_qty = retrieve_order.data.quantity.clone();
+                let retrieved_order = retrieve_queue.pop().unwrap(); // is_some already
+                retrieve_map.remove(retrieved_order.id);
+                publish_order_remove(&retrieved_order);
+                let retrieved_qty = retrieved_order.data.quantity.clone();
                 let diff = qty as i32 - retrieved_qty as i32;
                 deal(Deal {
-                    price: (deal_price.f)(&data, &retrieve_order.data),
+                    price: (deal_price.f)(&data, &retrieved_order.data),
                     quantity: retrieved_qty,
                 });
                 if diff == 0 {
@@ -72,16 +74,15 @@ impl Matcher {
                 } else if diff > 0 {
                     _run(diff as usize, kind, &data, retrieve_queue, add_queue, retrieve_map, add_map, &comparison, &deal_price);
                 } else if diff < 0 {
-                    // TODO just update order
-                    let new_order = make_order(&OrderCommons {
-                        price: retrieve_order.data.price.clone(),
+                    // TODO just update the order
+                    create_order(&OrderCommons {
+                        price: retrieved_order.data.price.clone(),
                         quantity: diff.abs() as usize,
                     }, kind, add_queue, add_map);
-                    //publishBidChange(new_order)
                 }
             } else {
 
-                let id = make_order(&data, kind, add_queue, add_map);
+                let id = create_order(&data, kind, add_queue, add_map);
                 // publish_order(id);
             }
         };

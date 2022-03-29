@@ -2,6 +2,8 @@ mod model;
 mod reporter;
 mod database;
 mod matcher;
+mod big_uint;
+mod simple_broker;
 
 use async_graphql::*;
 use std::cmp::Ordering;
@@ -22,53 +24,16 @@ use std::str::FromStr;
 use std::time::Duration;
 use num_bigint::{BigUint, ParseBigIntError};
 
-pub use model::QueryRoot;
+// pub use model::QueryRoot;
 use crate::orderbook::database::ORDERBOOK_STATE;
 use crate::orderbook::matcher::{Matcher, OrderType};
+pub(crate) use crate::orderbook::model::{SubscriptionRoot, QueryRoot};
 use crate::orderbook::reporter::{OrderScaffold, Reporter};
+use crate::orderbook::big_uint::{MyBigUint};
 
-pub type OrderBookSchema = Schema<QueryRoot, EmptyMutation, EmptySubscription>;
+pub(crate) type OrderBookSchema = Schema<QueryRoot, EmptyMutation, SubscriptionRoot>;
 
-#[derive(Hash, Eq, PartialEq, Debug, Clone)]
-pub(crate) struct MyBigUint(BigUint);
 
-impl fmt::Display for MyBigUint {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        fmt::Display::fmt(&self.0, f)
-    }
-}
-
-impl Add for MyBigUint {
-    type Output = MyBigUint;
-
-    fn add(self, rhs: Self) -> Self::Output {
-        MyBigUint(self.0.add(rhs.0))
-    }
-}
-
-impl FromStr for MyBigUint {
-    type Err = ParseBigIntError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(MyBigUint(BigUint::from_str(s)?))
-    }
-}
-
-#[Scalar]
-impl ScalarType for MyBigUint {
-    fn parse(value: Value) -> InputValueResult<Self> {
-        if let Value::String(value) = &value {
-            Ok(MyBigUint::from_str(value)?)
-        } else {
-            // If the type does not match
-            Err(InputValueError::expected_type(value))
-        }
-    }
-
-    fn to_value(&self) -> Value {
-        Value::String(self.0.to_str_radix(10))
-    }
-}
 
 #[derive(Hash, Clone, Eq, PartialEq, Debug, SimpleObject)]
 pub struct OrderCommons {
