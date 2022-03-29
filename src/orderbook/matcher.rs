@@ -4,7 +4,9 @@ use crate::orderbook::{Order, MyBigUint, OrderCommons};
 use async_graphql::*;
 use slab::Slab;
 use std::fmt::Display;
+use uuid::Uuid;
 use crate::orderbook::model::{Deal, deal, publish_order_add, publish_order_remove};
+use crate::orderbook::uuid::MyUuid;
 
 pub(crate) struct Matcher {
 
@@ -65,10 +67,7 @@ impl Matcher {
                 publish_order_remove(&retrieved_order);
                 let retrieved_qty = retrieved_order.data.quantity.clone();
                 let diff = qty as i32 - retrieved_qty as i32;
-                deal(Deal {
-                    price: (deal_price.f)(&data, &retrieved_order.data),
-                    quantity: retrieved_qty,
-                });
+                deal(Deal::new((deal_price.f)(&data, &retrieved_order.data), retrieved_qty));
                 if diff == 0 {
                     // deal done
                 } else if diff > 0 {

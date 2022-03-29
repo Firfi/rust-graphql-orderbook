@@ -1,16 +1,20 @@
 use std::borrow::Cow;
 use std::collections::VecDeque;
 use std::time::Duration;
-use async_graphql::{connection::{query, Connection, Edge, EmptyFields}, Context, ContextSelectionSet, Enum, FieldResult, Interface, Object, OutputType, Positioned, ServerResult};
+use async_graphql::{connection::{query, Connection, Edge, EmptyFields}, Context, ContextSelectionSet, Enum, FieldResult, Interface, Object, Positioned, ServerResult};
 use async_graphql::parser::types::Field;
 use async_graphql::registry::Registry;
 use crate::orderbook::{MyBigUint, Order, OrderBook};
 use async_graphql::*;
 use async_graphql::futures_util::StreamExt;
+use chrono::{DateTime, FixedOffset, Utc};
 use futures_core::Stream;
 use tokio_stream::wrappers::IntervalStream;
+use uuid::Uuid;
 use crate::orderbook::database::{HISTORY_CAPACITY, HISTORY_STATE, ORDERBOOK_STATE};
+use crate::orderbook::date_time::MyDateTime;
 use crate::orderbook::simple_broker::SimpleBroker;
+use crate::orderbook::uuid::MyUuid;
 
 #[derive(Enum, Copy, Clone, Eq, PartialEq)]
 pub enum OrderKind {
@@ -41,6 +45,19 @@ impl QueryRoot {
 pub(crate) struct Deal {
     pub(crate) price: MyBigUint,
     pub(crate) quantity: usize,
+    pub(crate) id: MyUuid,
+    pub(crate) created_at: MyDateTime<FixedOffset>,
+}
+
+impl Deal {
+    pub(crate) fn new(price: MyBigUint, quantity: usize) -> Self {
+        Self {
+            price,
+            quantity,
+            id: MyUuid(Uuid::new_v4()),
+            created_at: MyDateTime(Utc::now().with_timezone(&FixedOffset::east(0))),
+        }
+    }
 }
 
 pub(crate) fn deal(d: Deal) {

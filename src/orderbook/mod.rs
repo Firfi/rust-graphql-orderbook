@@ -4,6 +4,8 @@ mod database;
 mod matcher;
 mod big_uint;
 mod simple_broker;
+mod uuid;
+mod date_time;
 
 use async_graphql::*;
 use std::cmp::Ordering;
