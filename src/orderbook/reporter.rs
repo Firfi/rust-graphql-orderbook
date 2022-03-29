@@ -49,7 +49,7 @@ impl Reporter {
             .into_iter()
             .map(|i| OrderScaffold {
                 price: MyBigUint(price_law(n + i as u64) + BigUint::from(self.price_fluctuation())),
-                quantity: self.rng.gen_range(0..100),
+                quantity: self.rng.gen_range(1..100),
             })
             .collect::<Vec<OrderScaffold>>();
         // scaffolds.shuffle(&mut self.rng);
