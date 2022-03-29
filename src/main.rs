@@ -5,6 +5,7 @@
 mod orderbook;
 use crate::orderbook::run_reporter_poll;
 use tokio::time::Duration;
+use std::env;
 
 use async_graphql::{
     http::{playground_source, GraphQLPlaygroundConfig},
@@ -30,6 +31,9 @@ async fn graphql_playground() -> impl IntoResponse {
 
 #[tokio::main]
 async fn main() {
+
+    let PORT = env::var("PORT").unwrap_or("3000".to_string());
+
     let schema = Schema::build(QueryRoot, EmptyMutation, SubscriptionRoot)
         .finish();
 
@@ -38,18 +42,11 @@ async fn main() {
         .route("/ws", GraphQLSubscription::new(schema.clone()))
         .layer(Extension(schema));
 
-    println!("Playground: http://localhost:3000");
+    println!("{}", format!("Playground: http://localhost:{}", &PORT));
 
-    tokio::join!(run_reporter_poll(), axum::Server::bind(&"0.0.0.0:3000".parse().unwrap())
+
+
+    tokio::join!(run_reporter_poll(), axum::Server::bind(&format!("0.0.0.0:{}", &PORT).parse().unwrap())
         .serve(app.into_make_service()));
 
 }
-// async fn graphql_handler(schema: Extension<BooksSchema>, req: GraphQLRequest) -> GraphQLResponse {
-//     schema.execute(req.into_inner()).await.into()
-// }
-
-// async fn graphql_playground() -> impl IntoResponse {
-//     response::Html(playground_source(
-//         GraphQLPlaygroundConfig::new("/").subscription_endpoint("/ws"),
-//     ))
-// }

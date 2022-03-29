@@ -72,12 +72,6 @@ impl SubscriptionRoot {
     }
 }
 
-// #[derive(Enum, Copy, Clone, Eq, PartialEq)]
-// pub(crate) enum OrderUpdateType {
-//     Add,
-//     Remove,
-// }
-
 #[derive(Hash, Clone, SimpleObject)]
 pub(crate) struct OrderAdded {
     pub(crate) order: Order
