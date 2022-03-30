@@ -12,7 +12,7 @@ pub(crate) struct Matcher {
 
 }
 
-#[derive(PartialEq, Hash, Eq, Clone, Copy, Enum, strum_macros::Display)]
+#[derive(PartialEq, Hash, Eq, Clone, Copy, Debug, Enum, strum_macros::Display)]
 pub(crate) enum OrderType {
     Buy,
     Sell,

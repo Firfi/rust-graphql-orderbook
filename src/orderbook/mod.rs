@@ -19,7 +19,7 @@ use tokio::time;
 use async_graphql::{EmptyMutation, EmptySubscription, Schema};
 use slab::Slab;
 use std::collections::HashMap;
-use std::fmt::Formatter;
+use std::fmt::{Display, Formatter};
 use std::iter::Rev;
 use std::ops::Add;
 use std::str::FromStr;
@@ -49,7 +49,13 @@ impl fmt::Display for OrderCommons {
     }
 }
 
-#[derive(Hash, Clone, SimpleObject)]
+impl fmt::Display for Order {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "Order {{ kind: {}, id: {}, data: {} }}", self.kind, self.id, self.data)
+    }
+}
+
+#[derive(Hash, Clone, Debug, SimpleObject)]
 pub struct Order {
     id: usize, // we may want to stricten it to newtype
     data: OrderCommons,
@@ -94,11 +100,27 @@ pub struct OrderBook {
 
 const DEFAULT_LIMIT: usize = 100;
 
-fn sorted_slice<T: Ord + std::clone::Clone>(h: &BinaryHeap<T>, limit: Option<usize>) -> Vec<T> {
+struct SliceDisplay<'a, T: 'a>(&'a [T]);
+
+impl<'a, T: fmt::Display + 'a> fmt::Display for SliceDisplay<'a, T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut first = true;
+        for item in self.0 {
+            if !first {
+                write!(f, ", {}", item)?;
+            } else {
+                write!(f, "{}", item)?;
+            }
+            first = false;
+        }
+        Ok(())
+    }
+}
+
+fn sorted_slice<T: Ord + std::clone::Clone + fmt::Display>(h: &BinaryHeap<T>, limit: Option<usize>) -> Vec<T> {
     let mut v = h.clone().into_sorted_vec();
     v.reverse();
-    let limit_ = cmp::min(limit.unwrap_or(DEFAULT_LIMIT), v.len());
-    v[0..limit_].to_vec()
+    v[0..cmp::min(limit.unwrap_or(DEFAULT_LIMIT), v.len())].to_vec()
 }
 
 #[Object]
