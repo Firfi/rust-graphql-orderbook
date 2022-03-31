@@ -1,20 +1,25 @@
+use super::types::big_uint::MyBigUint;
 use std::borrow::Cow;
-use std::collections::VecDeque;
+use std::collections::{BinaryHeap, VecDeque};
 use std::time::Duration;
-use async_graphql::{connection::{query, Connection, Edge, EmptyFields}, Context, ContextSelectionSet, Enum, FieldResult, Interface, Object, Positioned, ServerResult};
+use async_graphql::{connection::{Connection, Edge, EmptyFields, query}, Context, ContextSelectionSet, Enum, FieldResult, Interface, Object, Positioned, ServerResult};
 use async_graphql::parser::types::Field;
 use async_graphql::registry::Registry;
-use crate::orderbook::{MyBigUint, Order, OrderBook};
 use async_graphql::*;
 use async_graphql::futures_util::StreamExt;
 use chrono::{DateTime, FixedOffset, Utc};
 use futures_core::Stream;
 use tokio_stream::wrappers::IntervalStream;
 use uuid::Uuid;
+use std::fmt;
+use std::fmt::Formatter;
+use std::cmp::Ordering;
+use slab::Slab;
 use crate::orderbook::database::{HISTORY_CAPACITY, HISTORY_STATE, ORDERBOOK_STATE};
-use crate::orderbook::date_time::MyDateTime;
 use crate::orderbook::simple_broker::SimpleBroker;
-use crate::orderbook::uuid::MyUuid;
+use crate::orderbook::types::date_time::MyDateTime;
+use crate::orderbook::types::slice_display::sorted_slice;
+use crate::orderbook::types::uuid::MyUuid;
 
 #[derive(Enum, Copy, Clone, Eq, PartialEq)]
 pub enum OrderKind {
@@ -22,7 +27,7 @@ pub enum OrderKind {
     Sell,
 }
 
-pub struct QueryRoot;
+pub(crate) struct QueryRoot;
 
 #[Object]
 impl QueryRoot {
@@ -105,4 +110,87 @@ pub(crate) fn publish_order_add(order: &Order) {
 
 pub(crate) fn publish_order_remove(order: &Order) {
     SimpleBroker::publish(OrderRemoved { order: order.clone() });
+}
+
+#[derive(Hash, Clone, Eq, PartialEq, Debug, SimpleObject)]
+pub(crate) struct OrderCommons {
+    pub(crate) quantity: usize,
+    pub(crate) price: MyBigUint
+}
+
+impl fmt::Display for OrderCommons {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "OrderCommons {{ quantity: {}, price: {} }}", self.quantity, self.price)
+    }
+}
+
+impl fmt::Display for Order {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "Order {{ kind: {}, id: {}, data: {} }}", self.kind, self.id, self.data)
+    }
+}
+
+#[derive(Hash, Clone, Debug, SimpleObject)]
+pub(crate) struct Order {
+    pub(crate) id: usize, // we may want to stricten it to newtype
+    pub(crate) data: OrderCommons,
+    pub(crate) kind: OrderType,
+}
+
+impl PartialEq for Order {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id && self.kind == other.kind
+    }
+}
+
+impl Eq for Order {}
+
+impl Ord for Order {
+    fn cmp(&self, other: &Self) -> Ordering {
+        if self.kind != other.kind { // incomparable
+            panic!("Incomparable orders (Buy and Sell)");
+        }
+        return if self.kind == OrderType::Sell {
+            other.data.price.0.cmp(&self.data.price.0)
+        } else {
+            self.data.price.0.cmp(&other.data.price.0)
+        }
+
+    }
+}
+
+impl PartialOrd for Order {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+#[derive(Clone)]
+pub(crate) struct OrderBook {
+    pub(crate) bids: BinaryHeap<Order>,
+    pub(crate) asks: BinaryHeap<Order>,
+    pub(crate) bid_map: Slab<OrderCommons>,
+    pub(crate) ask_map: Slab<OrderCommons>,
+}
+
+#[Object]
+impl OrderBook {
+    async fn bids_total(&self) -> usize {
+        self.bids.len()
+    }
+    async fn bids(&self, limit: Option<usize>) -> Vec<Order> {
+        sorted_slice(&self.bids, limit)
+    }
+    async fn asks_total(&self) -> usize {
+        self.asks.len()
+    }
+    async fn asks(&self, limit: Option<usize>) -> Vec<Order> {
+        sorted_slice(&self.asks, limit)
+    }
+}
+
+#[derive(PartialEq, Hash, Eq, Clone, Copy, Debug, Enum, strum_macros::Display)]
+pub(crate) enum OrderType {
+    Buy,
+    Sell,
 }

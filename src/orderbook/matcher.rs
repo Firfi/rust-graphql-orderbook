@@ -1,21 +1,14 @@
 use std::collections::BinaryHeap;
 use crate::orderbook::database::ORDERBOOK_STATE;
-use crate::orderbook::{Order, MyBigUint, OrderCommons};
 use async_graphql::*;
 use slab::Slab;
 use std::fmt::Display;
 use uuid::Uuid;
-use crate::orderbook::model::{Deal, deal, publish_order_add, publish_order_remove};
-use crate::orderbook::uuid::MyUuid;
+use crate::orderbook::model::{Deal, deal, Order, OrderCommons, OrderType, publish_order_add, publish_order_remove};
+use crate::orderbook::types::big_uint::MyBigUint;
 
 pub(crate) struct Matcher {
 
-}
-
-#[derive(PartialEq, Hash, Eq, Clone, Copy, Debug, Enum, strum_macros::Display)]
-pub(crate) enum OrderType {
-    Buy,
-    Sell,
 }
 
 struct CompareOrders {

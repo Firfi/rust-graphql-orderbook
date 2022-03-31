@@ -3,7 +3,7 @@ use once_cell::sync::Lazy;
 use std::sync::Mutex;
 use slab::Slab;
 use crate::orderbook::model::Deal;
-use crate::orderbook::OrderBook;
+use crate::orderbook::model::OrderBook;
 
 pub const ORDERBOOK_CAPACITY: usize = 50;
 pub const HISTORY_CAPACITY: usize = 10_000;

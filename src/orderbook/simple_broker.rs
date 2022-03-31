@@ -1,3 +1,5 @@
+// simple broker from the async-graphql Subscriptions example
+
 use std::any::{Any, TypeId};
 use std::collections::HashMap;
 use std::marker::PhantomData;

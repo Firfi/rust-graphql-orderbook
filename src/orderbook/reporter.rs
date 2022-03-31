@@ -5,8 +5,9 @@ use rand::{Rng, RngCore};
 use rand::seq::SliceRandom;
 use tokio::time::Interval;
 use num_traits::cast::ToPrimitive;
-use crate::orderbook::{MyBigUint, Order};
 use crate::orderbook::database::ORDERBOOK_STATE;
+use crate::orderbook::model::Order;
+use crate::orderbook::types::big_uint::MyBigUint;
 
 const MARGIN: usize = 6;
 const BIDDER_CROWD: usize = 10;
