@@ -52,15 +52,17 @@ pub(crate) struct Deal {
     pub(crate) quantity: usize,
     pub(crate) id: MyUuid,
     pub(crate) created_at: MyDateTime<FixedOffset>,
+    pub(crate) kind: OrderType,
 }
 
 impl Deal {
-    pub(crate) fn new(price: MyBigUint, quantity: usize) -> Self {
+    pub(crate) fn new(price: MyBigUint, quantity: usize, kind: OrderType) -> Self {
         Self {
             price,
             quantity,
             id: MyUuid(Uuid::new_v4()),
             created_at: MyDateTime(Utc::now().with_timezone(&FixedOffset::east(0))),
+            kind,
         }
     }
 }
